@@ -1,0 +1,466 @@
+---
+title:  "Lab 2: Who Pays More?"
+subtitle: "Examining Rate Spread Variation by Race in Mortgage Loans https://github.com/mids-w203/lab_2_mean_machine/tree/main" 
+date: today
+date-format: long 
+author: "Ender Ricart | Kelvin Yang | Alex Kim"
+format: 
+  html: default
+  pdf: 
+    documentclass: scrartcl
+toc: false 
+colorlinks: true
+cap-locaiton: bottom
+execute: 
+  echo: false 
+  warning: false 
+  message: false 
+bibliography: references.bib
+citeproc: true
+biblio-title: References
+link-citations: true
+---
+
+\newpage
+
+```{r, include=FALSE}
+library(tidyverse)
+library(patchwork)
+library(stringr)
+library(sandwich) 
+library(stargazer)
+library(dplyr)
+library(ggplot2)
+library(car)
+library(lmtest)
+library(moments)
+library(GGally)
+library(psych)
+library(gridExtra)
+library(janitor)
+```
+
+```{r set plotting theme, include=FALSE}
+theme_set(theme_minimal())
+```
+
+#### 1. Introduction
+
+In 2023, CNN published an investigative report alleging racial disparities in the Navy Federal Credit Union’s (NFCU) mortgage lending practices. (@tolan2023) Using NFCU's loan-level data, CNN's analysis showed that "Black/African American" borrowers experienced significantly lower approval rates than "White" borrowers. As a fair lending analytics team at the Consumer Financial Protection Bureau (CFPB), we have conducted a descriptive analysis that builds on CNN’s findings to explore the relationships between a successful borrower's race or ethnicity and mortgage pricing outcomes for NFCU. Even slight differences in the mortgage rate has a long-term financial consequences for borrowers.
+
+#### 2. Description of the Data Source
+
+We obtained a prefiltered subset of the Home Mortgage Disclosure Act (HMDA) Modified Loan Application Register (LAR) data directly from the CFPB's website. It consists of loan applications for home purchases submitted to the NFCU in 2023 and contains loan-level information for mortgages reported by financial institutions and individual-level mortgage application records, including applicant demographic information, loan details, and loan outcomes.
+
+We looked at individual mortgage loan applications. We only included applications that were approved, were conventional conforming loans, and were for homes where people live (primary residences). By focusing only on these types of loans, we could better compare how different borrowers were treated under the same lending rules. By excluding denied applications, selection bias has been introduced that prevents us from analysing racial or ethnic disparities in loan successes as CNN has done. In the full dataset, approximately 51% of applicants identified as White and 23% as Black or African American. However, after applying the sample restrictions, White applicants represent over 65% of the sample, while Black applicants account for only 17% (see @fig-dist). This shift suggests that approval rates vary by race, potentially contributing to the increased disparity observed in the filtered data. This limitation means our findings may understate disparities that are more evident in the full applicant pool. Therefore, our results should be interpreted as describing rate differences conditional on approval, not disparities in access to credit overall. This limitation is relevant because our focus on previous reporting from CNN already shows racial approval disparities at NFCU.
+
+```{r import, include=FALSE}
+data <- read.csv("~/lab_2_mean_machine/data/raw/lei_5493003GQDUH26DNNH17_actions_taken_1-2_loan_purposes_1.csv")
+data <- data %>% janitor::clean_names()
+```
+
+#### 3. Data Wrangling and Operationalization
+##### Data Wrangling 
+
+Our data-wrangling process prioritized analytic clarity and supported independent and identically distributed (i.i.d.) assumptions. After filtering our dataset for approved loans, we then narrowed our set more to include only conventional and conforming loans. These loan types follow standardized underwriting guidelines established by Fannie Mae and Freddie Mac. In doing so we control for variability in how lenders determine a borrower's creditworthiness and that we are comparing loans that are evaluated similarly. These standards provide consistent treatment of borrowers and identically distributed observations. We also excluded introductory-rate loans, as these types of loans have different pricing and may not follow standardized underwriting guidelines. We eliminated records with missing values for critical predictor variables such as rate spread, loan-to-value ratio, income, and debt-to-income ratio.
+
+As a result, we removed 22,934 applications that did not meet criteria for standardized pricing analysis. This included 16,322 non-conventional loans (e.g., Federal Housing Administration), 1,068 non-conforming loans, 1,514 loans for non-primary residences, 3,718 with introductory rates, 116 second trust deed loans, and 196 records missing key variables. Our final dataset contained 6,527 observations (22.2% of the original data, home purchase loans for primary residence approved by NFCU in 2023), providing a foundation for examining racial disparities in mortgage pricing.
+
+##### Operationalization: Rate Spread as the Outcome Variable
+
+Rate spread is defined as the difference between annual percentage rate (APR) and average prime offer rate (APOR), a market benchmark rate. We selected rate spread as our outcome variable because it allows us to evenly assess whether similarly situated applicatns receive interest rates that systematically differ from the benchmark. This accommodates daily fluctuations in the lending market, as opposed to measuring APR outright. 
+
+##### Operationalization: Race
+
+In our dataset, Race and Ethnicity are self-selected by applicants or visually determined and reported by Navy Federal Credit Union personnel. We operationalized race based on the following logic:
+
+1.  White race group: If either applicant or co-applicant identified as White, the application was classified as "White." This approach follows fair lending guidance and reflects how NFCU may view joint applications.
+2.  Primary applicant's self-reported race: If neither the applicant nor co-applicant is White, then we default to the primary applicant's self-reported race. We consolidated disaggregated Asian and Pacific Islander subgroups into broader categories (e.g., classifying Asian Indian, Chinese, etc. as Asian).
+3.  Hispanic/Latino: We created a category for Hispanic/Latino in our operationalization of race, even though US Census defines Hispanic/Latino as an ethnic category. If self-reported race is missing but either applicant identified as Hispanic/Latino, we counted the row counted the application as Hispanic/Latino.
+4.  Observed race: If no self-reported race or ethnicity information was available, we used visually observed race as reported by NFCU.
+
+We considered alternative classification approaches, including using only the primary applicant's self-reported race, to maintain consistency across all observations and avoid mixed-race categorization. We also considered assigning Hispanic ethnicity first or using only primary applicant race, but our approach better reflects lender perception and attempts to avoid misclassification as much as possible.
+
+##### Control Variables
+
+We included several variables commonly used in underwriting and pricing models to isolate racial disparities that applicant's credit risk cannot explain:
+
+-   Debt-to-income (DTI) ratio: Reflects the borrower’s ability to repay and may influence pricing tiers. Since the LAR reports exact values (within the 36%-49% range) and categorical ranges, we converted ranges to numeric midpoints to retain those observations.
+-   Loan-to-value (LTV) ratio: Reflects borrower equity; higher LTVs typically receive higher pricing.
+-   Income: Serves as a proxy for repayment capacity.
+-   Loan amount: Affects pricing through risk-based adjustments and eligibility thresholds.
+
+##### Splitting the data into an exploration set and a confirmation set 
+
+To minimize overfitting from sequential model decisions, we randomly split the original dataset into a 30% exploration set (n = 1,958) and a 70% confirmation set (n = 4,569). All transformation and modeling choices were made using only the exploration set.
+
+```{r data wrangling, include=FALSE}
+# Apply the filters
+nfcu_data_raw <- data %>%
+  filter(
+    #limiting to conforming loans to ensure comparability across borrowers as these loans follow the standardized underwriting guidelines. This also helps satisfy the assumption of identically distributed outcomes
+    conforming_loan_limit == "C", 
+
+    #limiting to conventional loans to exclude government backed loans, which uses a different underwriting guidelines
+    loan_type == 1,
+   
+     #limiting to loans for primary residence (excluding investment loans which follows different underwriting standards)
+    occupancy_type == 1,
+    
+    #exclusing 2nd lien loans such as home equity loans
+    lien_status == 1,
+    
+    #excluding to loans with introductory rate period
+    is.na(intro_rate_period),
+    
+    #excluding extreme LTV value (possible data input error)
+    loan_to_value_ratio < 200,
+    
+    #removing NAs for our predictors
+    !is.na(rate_spread),
+    !is.na(loan_to_value_ratio),
+    !is.na(income) & income > 0,
+    !is.na(debt_to_income_ratio) & debt_to_income_ratio != ""
+  ) %>%
+  mutate(
+    # adding description for the race code
+    race_group = case_when(
+      # In cases where the co-applicant is identified as ‘White’ and the applicant is of a different race, we reclassify the applicant’s race as ‘White’ 
+      applicant_race_1 == 5 | co_applicant_race_1 == 5 ~ "White",
+      
+      # Classify race group based on the primary applicant's race
+      applicant_race_1 == 1 ~ "American Indian or Alaska Native",
+      applicant_race_1 %in% c(2, 21:27) ~ "Asian",
+      applicant_race_1 == 3 ~ "Black or African American",
+      applicant_race_1 %in% c(4, 41:44) ~ "Pacific Islander",
+      
+      # Hispanic as a distinct group regardless of race
+      applicant_ethnicity_1 %in% c(1, 11, 12, 13, 14) | co_applicant_ethnicity_1 %in% c(1, 11, 12, 13, 14) ~ "Hispanic or Latino",
+      
+      # Classify race group based on the primary applicant's race
+      applicant_race_observed == 1 ~ "American Indian or Alaska Native",
+      applicant_race_observed %in% c(2, 21:27) ~ "Asian",
+      applicant_race_observed == 3 ~ "Black or African American",
+      applicant_race_observed %in% c(4, 41:44) ~ "Pacific Islander",
+      
+      TRUE ~ "Other"
+    ),
+    
+    # Convert categorical ranges to numeric value using the mid point and exact value to numeric # add rationale for this assumption
+    dti_clean = case_when(
+      debt_to_income_ratio == "<20%" ~ 15,
+      debt_to_income_ratio == "20%-<30%" ~ 25,
+      debt_to_income_ratio == "30%-<36%" ~ 33,
+      debt_to_income_ratio == "50%-60%" ~ 55,
+      debt_to_income_ratio == ">60%" ~ 65,
+      debt_to_income_ratio %in% c("NA", "Exempt") ~ NA_real_,
+      TRUE ~ suppressWarnings(as.numeric(debt_to_income_ratio))
+    )
+  )
+
+summary(nfcu_data_raw)
+
+
+#split the data into explaration and confimration datasets
+set.seed(111)
+
+split_index <- sample(1:nrow(nfcu_data_raw), size = 0.3 * nrow(nfcu_data_raw))
+
+#create exploration dataset
+nfcu_data <- nfcu_data_raw[split_index, ]
+
+#create confirmation dataset
+confirm_data <- nfcu_data_raw[-split_index, ]
+
+nrow(nfcu_data)
+nrow(confirm_data)
+```
+
+#### 4. Model Specification
+
+To explain racial disparities in mortgage pricing, we estimated two linear regression models using rate spread as the dependent variable. The simple model uses race as the sole predictor variable, and the expanded model uses control variables, including income, debt-to-income ratio (DTI), loan-to-value ratio (LTV), and loan amount. These variables were selected because they are all common credit risk indicators that are publicly available.
+
+```{r model, echo=TRUE}
+model_simple <- lm(rate_spread ~ race_group, data=nfcu_data)
+model_expanded <- lm(rate_spread ~ race_group + loan_to_value_ratio +
+                       dti_clean + income + loan_amount, data=nfcu_data)
+```
+
+The race group is a categorical variable, with White as the reference category. This approach allows us to assess average differences in pricing between White applicants and other race groups. All other variables are metric. Full model specs, estimates, and robust standards errors are shown in @tbl-models.
+
+#### 5. Model Assumptions
+
+##### i.i.d
+
+While we have taken steps to support the i.i.d. of data, we still expect some clustering. We limited our sample to a single year (2023) and primary residence home loans, minimizing the likelihood of multiple applications by a single borrower. However, a small number of borrowers may still appear multiple times in the data set; the dataset is anonymized, so we cannot directly identify duplicate applications from the same person. Furthermore, there may be some level of geographic clustering in the sample of approved loans. Borrowers from the same geographic areas may face similar lending conditions, leading to correlated outcomes within regions.
+
+##### Linearity and Zero Conditional Mean
+
+When plotting the expanded model's residuals against fitted values, it shows a funnel-shaped pattern and curvature, suggesting nonlinearity and heteroscedasticity. To address this, we first applied a signed log transformation to the dependent variable, rate spread, which improved the overall linear relationship. We then examined each predictor individually. The relationships between residuals and the predictors, income, loan-to-value ratio, and loan amount, showed evidence of nonlinearity. Applying a log transformation to income and loan amount improved the linear fit and transforming the loan-to-value ratio using a second-degree polynomial addressed the curvature in its residual plot.
+
+```{r assumption evaluation, include=FALSE}
+plot(model_expanded, which =1)
+
+nfcu_data %>% 
+  mutate(
+    model_expanded_preds = predict(model_expanded), 
+    model_expanded_resids = resid(model_expanded)
+  ) %>% 
+  ggplot(aes(model_expanded_preds, model_expanded_resids)) + 
+  geom_point() + 
+  stat_smooth()
+
+model_expanded <- lm(rate_spread~race_group+loan_to_value_ratio+dti_clean+income+loan_amount, data=nfcu_data)
+coeftest(model_expanded,vcov=vcovHC(model_expanded))
+
+#transform rate spread: initial plot showed issues with linearity and heteroscedasticity. Since rate spread contains both positive and negative numbers, we applied signed log transformation
+nfcu_data <- nfcu_data %>%
+  mutate(log_rate_spread = sign(rate_spread) * log1p(abs(rate_spread)))
+
+model_logmod <- lm(log_rate_spread ~ race_group + loan_to_value_ratio + dti_clean + income + loan_amount, data = nfcu_data)
+plot(model_logmod, which =1)
+
+#transform income: We applied a log transformation to the income variable to correct for skewness and improve the linearity of the relationship with rate spread. This transformation also helped stabilize variance across different income levels, as seen in the residual plots.
+plot(nfcu_data$income, model_expanded$residuals)
+lines(lowess(nfcu_data$income, model_expanded$residuals), col = "blue", lwd = 2)
+
+model_expanded1 <- lm(rate_spread ~ race_group + loan_to_value_ratio +
+                       dti_clean + log(income) + loan_amount, data=nfcu_data)
+plot(model_expanded1, which =1)
+plot(log(nfcu_data$income), model_expanded1$residuals)
+lines(lowess(log(nfcu_data$income), model_expanded1$residuals), col = "blue", lwd = 2)
+
+#transform loan to value: we identified and removed one record with LTV > 200% which most likely is an input error as such extreme LTV is generally not allowed. Once removed, with a polynomial transformation residual we see improved linearity and homoscedasticity. We also centered the data to reduce collinearity (without it VIF was above 39 for these two variables)
+plot(nfcu_data$loan_to_value_ratio, model_expanded$residuals)
+lines(lowess(nfcu_data$loan_to_value_ratio, model_expanded$residuals), col = "blue", lwd = 2)
+
+nfcu_data$ltv_centered <- scale(nfcu_data$loan_to_value_ratio, center = TRUE, scale = FALSE)
+model_expanded1 <- lm(rate_spread ~ race_group + ltv_centered + I(ltv_centered^2) + dti_clean + income + loan_amount, data = nfcu_data)
+
+plot(nfcu_data$ltv_centered, model_expanded1$residuals)
+lines(lowess(nfcu_data$ltv_centered, model_expanded1$residuals), col = "blue", lwd = 2)
+
+#evaluate dti: no major concerns with linearity and zero mean
+plot(nfcu_data$dti_clean, model_expanded$residuals)
+lines(lowess(nfcu_data$dti_clean, model_expanded$residuals), col = "blue", lwd = 2)
+
+#evaluate loan amount: slight linearity and heteroscedasticity concerns from the plot
+plot(nfcu_data$loan_amount, model_expanded$residuals)
+lines(lowess(nfcu_data$loan_amount, model_expanded$residuals), col = "blue", lwd = 2)
+
+model_expanded1 <- lm(rate_spread ~ race_group + loan_to_value_ratio +
+                       dti_clean + income + log(loan_amount), data=nfcu_data)
+plot(model_expanded1, which =1)
+plot(log(nfcu_data$loan_amount), model_expanded1$residuals)
+lines(lowess(log(nfcu_data$loan_amount), model_expanded1$residuals), col = "blue", lwd = 2)
+
+#combined: r sqr improved after transofmraiton from .46 to .59
+model_expanded_tf <- lm(log_rate_spread ~ race_group + ltv_centered + I(ltv_centered^2)  + dti_clean + log(income) + log(loan_amount), data = nfcu_data)
+plot(model_expanded_tf, which =1)
+
+summary(model_expanded)$r.squared
+summary(model_expanded)$adj.r.squared
+summary(model_expanded_tf)$r.squared
+summary(model_expanded_tf)$adj.r.squared
+
+```
+
+```{r fig-resplot, fig.cap="Residual Plots of Expanded Model: Before and Ater Transformation", fig.align='center', fig.width=8, fig.height=3}
+# Create the before plot
+before_plot <- nfcu_data %>% 
+  mutate(
+    model_expanded_preds = predict(model_expanded), 
+    model_expanded_resids = resid(model_expanded)
+  ) %>% 
+  ggplot(aes(model_expanded_preds, model_expanded_resids)) + 
+  geom_point(alpha = 0.4) + 
+  stat_smooth(color = "blue", se = TRUE) +
+  labs(title = "Before Transformation",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal()
+
+# Create the after plot
+after_plot <- nfcu_data %>% 
+  mutate(
+    model_expanded_tf_preds = predict(model_expanded_tf), 
+    model_expanded_tf_resids = resid(model_expanded_tf)
+  ) %>% 
+  ggplot(aes(model_expanded_tf_preds, model_expanded_tf_resids)) + 
+  geom_point(alpha = 0.4) + 
+  stat_smooth(color = "blue", se = TRUE) +
+  labs(title = "After Transformation",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal()
+
+# Combine side by side
+before_plot + after_plot
+```
+
+After these transformations, the model’s performance improved substantially: the R-squared increased from 0.45 to 0.57, and the adjusted R-squared increased accordingly, indicating better model fit and enhanced adherence to OLS assumptions. Although some mild non-linearity remains at the extremes, the transformation substantially improved model behavior, bringing it closer to satisfying the linearity and zero conditional mean assumptions.
+
+##### No Perfect Collinearity
+
+The assumption of no perfect collinearity checks whether a predictor variable can be described completely by a combination of the others. The variance inflation factor (VIF) measures how much the variance of each regression coefficient is inflated due to multicollinearity. Our continuous variables have VIF values ranging between 1.17 and 2.04, indicating minimal concern with multicollinearity. Our categorical variable, race_group, has an adjusted generalized VIF value of 1.01, again suggesting minimal concern. After transformation, VIF values increased to range between 1.51 and 2.65 for continous variables but is still not a cause for concern with multicollinearity. Overall, both models meet the assumption of no perfect collinearity.
+
+```{r vif, include=FALSE}
+vif(model_expanded)
+vif(model_expanded_tf)
+```
+
+#### 6. Model Results and Interpretation
+
+When we applied our simple model to our confirmatory data set we found that Black (+0.56%), American Indian (+0.30%), and Hispanic (+0.20%) applicants had higher average rate spreads than White applicants. In the expanded model, which includes credit risk indicators (LTV, DTI, income, and loan amount), we found a reduction in the coefficients. As shown in @fig-rate-spread-race, based on our expanded model the average rate spread varies by race when controlling for LTV, DTI, income, and loan amount. Even after accounting for these credit risk factors, the predicted rate spread remains meaningfully higher for most minority race groups relative to White applicants. Statistically significant gaps remain for Black (+0.19%) and American Indian (+0.21%) applicants relative to White applicants, indicating residual differences in pricing not accounted for by observable underwriting criteria.
+
+The final model, which incorporates log and polynomial transformations to better meet OLS assumptions, improves model fit (adjusted R² increases from 0.46 to 0.59). The estimated gap for Black applicants is +2.5% in log rate spread, but is not statistically significant. The gap for American Indian applicants remains statistically significant, with a +7.6% in log rate spread. Asian applicants are associated with a +4.6% in log rate spread compared to White applicants, a statistically significant result only in the transformed model. These patterns suggest that differences in observable applicants' credit risk indicators and nonlinear relationships account for much of the variation seen in the simpler models. However, some group-level differences remain after adjusting for these factors.
+
+```{r simple model, include=FALSE}
+confirm_data$race_group <- relevel(factor(confirm_data$race_group), ref = "White")
+model_simple <- lm(rate_spread~race_group, data=confirm_data)
+
+coeftest(model_simple,vcov=vcovHC(model_simple))
+```
+
+```{r expanded model, include=FALSE}
+model_expanded <- lm(rate_spread~race_group+loan_to_value_ratio+dti_clean+income+loan_amount, data=confirm_data)
+coeftest(model_expanded,vcov=vcovHC(model_expanded))
+
+```
+
+```{r transformed model, include=FALSE}
+#apply transformation from the observation data
+confirm_data <- confirm_data %>%
+  mutate(log_rate_spread = sign(rate_spread) * log1p(abs(rate_spread)))
+
+confirm_data$ltv_centered <- scale(confirm_data$loan_to_value_ratio, center = TRUE, scale = FALSE)
+
+model_expanded_tf <- lm(log_rate_spread ~ race_group + ltv_centered + I(ltv_centered^2)  + dti_clean + log(income) + log(loan_amount), data = confirm_data)
+coeftest(model_expanded_tf,vcov=vcovHC(model_expanded_tf))
+```
+
+#### 7. Overall Effect
+
+Many credit risk indicators like income, credit-score, and location are correlated with race. Our descriptive analysis finds that even after controlling for some of these indicators, there continue to be small but systemic rate differentials for Black and Native American applicants. This raises concerns regarding fair lending practices, warranting further investigation. Since the publicly available LAR data does not capture all factors that influence rate pricing, additional nonpublic data can drive a deeper understanding of these disparities. We hope future analysis can build on our findings to reduce systemic housing inequities. 
+
+\newpage
+
+# Appendix
+
+```{r fig-dist, fig.align='center', fig.cap="Distribution of Applicants by Race Group", fig.width=5, fig.height=2.5, fig.align='center'}
+
+# Prepare the data with proportions
+race_dist <- nfcu_data_raw %>%
+  count(race_group) %>%
+  mutate(pct = n / sum(n))
+
+# Plot with percentage labels
+ggplot(race_dist, aes(x = race_group, y = pct)) +
+  geom_col(fill = c("steelblue", "steelblue", "steelblue", "steelblue", "steelblue", "blue")) +
+  geom_text(aes(label = scales::percent(pct, accuracy = 0.1)),
+            vjust = -0.1, size = 2) +
+  labs(title = "Distribution of Mortgage Borrowers by Race",
+       x = "Race Group",
+       y = "Percentage of Applications") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 6),
+        plot.margin = margin(t = 0, r = 0, b = 15, l = 0),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5)
+        ) +
+  coord_cartesian(clip = "off")
+
+```
+
+```{r fig-rate-spread-race, fig.cap="Average Estimated Rate Spread by Race Group with 95% CI (Adjusted for income, debt-to-loan ratio, loan-to-value ratio, and loan amount)", fig.align='center', fig.width=5, fig.height=2.5}
+
+#add prediction from our model
+model_two <- lm(rate_spread~race_group+loan_to_value_ratio+dti_clean+income+loan_amount, data=confirm_data)
+confirm_data$predicted_rate <- predict(model_two)
+
+#add confidence intervals to your analysis
+race_rate_ci <- confirm_data %>%
+  group_by(race_group) %>%
+  summarize(
+    count = n(),
+    avg_rate_spread = mean(predicted_rate, na.rm = TRUE),
+    se = sd(predicted_rate, na.rm = TRUE) / sqrt(n()),
+    ci_lower = avg_rate_spread - 1.96 * se,
+    ci_upper = avg_rate_spread + 1.96 * se,
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(avg_rate_spread))
+
+# Basic visualization of race and rate spread
+ggplot(race_rate_ci, aes(x = reorder(race_group, avg_rate_spread), y = avg_rate_spread)) +
+  geom_bar(stat = "identity", fill = c("steelblue", "steelblue", "steelblue", "blue", "steelblue", "steelblue")) +
+  labs(x = "Race Group",
+       y = "Estimated Rate Spread",
+       title = "Estimated Rate Spread by Race") +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1, size = 6),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5)
+        ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = .2, position = position_dodge(.9))
+```
+
+```{r tbl-models, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+#use White race group as a reference category
+confirm_data$race_group <- relevel(factor(confirm_data$race_group), ref = "White")
+
+#simple model
+model_simple <- lm(rate_spread~race_group, data=confirm_data)
+se_simple <- sqrt(diag(vcovHC(model_simple, type = "HC1")))
+
+#expanded model
+model_expanded <- lm(rate_spread~race_group+loan_to_value_ratio+dti_clean+income+loan_amount, data=confirm_data)
+se_expanded <- sqrt(diag(vcovHC(model_expanded, type = "HC1")))
+
+#transformed model
+se_expanded_tf <- sqrt(diag(vcovHC(model_expanded_tf, type = "HC1")))
+
+#create a stargazer table
+stargazer(model_simple, model_expanded, model_expanded_tf,
+          se = list(se_simple, se_expanded, se_expanded_tf),
+          title = "OLS Model Results: Rate Spread and Race",
+          type = "latex",
+          header = FALSE,
+          float = FALSE,
+          no.space = TRUE,
+          digits = 2,
+          font.size = "small",
+          column.labels = c("Simple", "Expanded", "Transformed"),
+          dep.var.labels = c("Rate Spread", "Log Rate Spread"),
+          covariate.labels = c("American Indian", "Asian", "Black",
+                               "Hispanic", "Pacific Islander", "LTV", "Centered LTV", "Centered LTV Squared", "DTI", "Income", "Loan Amount", "Log Income", "Log Loan Amount"),
+          omit.stat = c("f", "ser"),
+          notes = "Robust standard errors in parentheses. White applicants are the reference group.")
+
+
+```
+
+\newpage
+
+# References
+
+::: {#refs}
+:::
+
+Bartlett, Robert, Adair Morse, Richard Stanton, and Nancy Wallace. "Consumer-Lending Discrimination in the FinTech Era." Working Paper, Berkeley Haas School of Business, 2019. https://faculty.haas.berkeley.edu/morse/research/papers/discrim.pdf.
+
+Ambrose, Brent W., James Conklin, and Luis A. Lopez. "Does Borrower and Broker Race Affect the Cost of Mortgage Credit?" The Review of Financial Studies 34, no. 2 (2021): 790-826. https://pure.psu.edu/en/publications/does-borrower-and-broker-race-affect-the-cost-of-mortgage-credit 
+
+Bhutta, Neil, and Aurel Hizmo. "Do Minorities Pay More for Mortgages?" The Review of Financial Studies 34, no. 2 (2021): 763-789. https://academic.oup.com/rfs/article/34/2/763/5827007 
+
+Giacoletti, Marco, Rawley Heimer, and Edison G. Yu. "Using High-Frequency Evaluations to Estimate Discrimination: Evidence from Mortgage Loan Officers." Federal Reserve Bank of Philadelphia Working Paper (2021). https://www.philadelphiafed.org/-/media/frbp/assets/working-papers/2021/wp21-04.pdf 
+
+### Reference Materials:
+Consumer Financial Protection Bureau. "A Beginner's Guide to Accessing and Using Home Mortgage Disclosure Act Data." Washington, DC: Consumer Financial Protection Bureau, June 2022.https://files.consumerfinance.gov/f/documents/cfpb_beginners-guide-accessing-using-hmda-data_guide_2022-06.pdf. 
+
+CFPB's HMDA documentation page: https://ffiec.cfpb.gov/documentation/
+
+Modified LAR Schema documentation: https://ffiec.cfpb.gov/documentation/publications/modified-lar/modified-lar-schema
+
