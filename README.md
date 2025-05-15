@@ -59,3 +59,5 @@ Specialization: Science and Technology Studies
 - **Google UXR Award Recipient** (2023) for NLP model development
 - **Fulbright Fellowship** (2013)
 - **National Science Foundation Grant Recipient** (2010)
+
+This is protected by "Creative Commons Attribution Share Alike 4.0 International": https://creativecommons.org/licenses/by-sa/4.0/
