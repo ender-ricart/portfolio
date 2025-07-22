@@ -1,63 +1,114 @@
-# ENDER RICART, PhD
-## Data Science Professional with Qualitative & Quantitative Research Expertise
+# Dr. Ender Ricart
 
-[![Email](https://img.shields.io/badge/Email-enderricart%40gmail.com-blue)](mailto:enderricart@gmail.com)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue)](https://www.linkedin.com/in/enderricart)
-[![Medium](https://img.shields.io/badge/Medium-Articles-black)](https://medium.com/@enderricart)
-[![Google Scholar](https://img.shields.io/badge/Google%20Scholar-Publications-green)](https://scholar.google.com/citations?user=enderricart)
+**PhD Anthropology, University of Chicago (2015)**  
+**MA student at U.C. Berkeley School of Information (2026)**
 
-I am seeking entry and associate level Data Science positions as I make a career transition from mixed-methods UX Research. With this transition I bring a decade of industry expertise, including: honed business acumen, analytical intuition, and communication mastery developed through high-impact UX Research roles at Google, Amazon, and LivePerson.
+📧 enderricart@gmail.com  
+🔗 [LinkedIn](https://linkedin.com/in/enderricart) | [Medium](https://medium.com/@enderricart) | [GitHub Portfolio](https://github.com/enderricart) | [Academia to UX LLC](https://academiatoux.com) | [YouTube](https://youtube.com/@academiatoux)
 
 ---
 
-## 🎓 EDUCATION
+## 🎯 Value Proposition
 
-**University of California, Berkeley** — *Masters of Information Science* (In Progress, 2024-2026)  
-School of Information, Focus on Applied Machine Learning
+### **TECHNICAL TRANSLATOR & STRATEGIC BRIDGE-BUILDER**
+As one of the rare user researchers with deep technical expertise in AI engineering and data science, I excel at translating complex user needs into actionable technical requirements. This unique combination enables me to facilitate seamless collaboration between design, research, and engineering teams while ensuring user-centered solutions remain technically feasible and scalable.
 
-**University of Chicago** — *PhD in Cultural Anthropology* (2007-2015)  
-Specialization: Science and Technology Studies
+### **COMPLEXITY SPECIALIST WITH PROVEN IMPACT**
+I tackle the technology industry's most challenging problem spaces—from Counter-Abuse and Child Safety to Age-Assurance, Regulatory Readiness, Conversational AI, and Cloud Computing. With a decade of experience navigating these high-stakes environments, I consistently deliver research insights that drive both user satisfaction and business outcomes in domains where precision and ethical considerations are paramount.
 
----
-
-## 💻 TECHNICAL SKILLS
-
-- **Programming Languages:** Python, R, SQL
-- **Data Analysis:** Statistical Analysis, Applied ML, Data Visualization, Qualitative & Quantitative Methods
-- **Tools:** Jupyter, GitHub, VS Code, Pandas, NumPy, scikit-learn, TensorFlow, NLP Libraries, Data Visualization Tools
+### **MIXED-METHODS RESEARCH AUTHORITY**
+My PhD in Anthropology establishes me as a leading expert in qualitative research methodology, while my ongoing Master's at UC Berkeley School of Information strengthens my quantitative capabilities through advanced statistical analysis and applied machine learning. This dual expertise allows me to uncover deep user insights through ethnographic methods and validate findings through rigorous data analysis, providing comprehensive evidence for strategic decision-making.
 
 ---
 
-## 👨‍💼 PROFESSIONAL EXPERIENCE
+## 💼 Professional Experience
 
-### Google — Google Cloud, Counter Abuse, Consent & Transparency, Age Assurance (2020-present)
-- Implemented data-driven approach to streamline abuse reporting system, applying NLP for abuse detection and classification
-- Designed data collection frameworks for evaluating product usage across diverse user segments
-- Translated complex quantitative and qualitative datasets into actionable product recommendations
-- Collaborated with data scientists to develop user-centric metrics for measuring product success
+### **Google** — Staff UX Researcher
+*2020 - present (5 years)*
 
-### LivePerson, AI Research Team (2019-2020)
-- Collaborated with ML engineers to develop patent-approved training algorithm based on conversational data analysis
-- Published technical articles on data-driven conversational design methodologies
+- Led a cross-functional NLP program to streamline end-user abuse reporting, reducing processing times by mapping user-centered abuse taxonomies to internal labels and implementing LLM for abuse detection
+- Led a large-scale international study on minors' encounters with online abuses and jointly published with Harvard University professor - *Help-seeking and Coping Strategies for Technology-facilitated Abuse Experienced by Youth*
+- Foundational research in Google Cloud resulted in the launch of 6 new products: Batch computing, Flexible Use Discounts, Shared Reservations, Spot VMs, Task Queues, Dynamic Workload Scheduler, and a re-architecting of Machine Families structuring
 
-### Amazon (2017-2019)
-- Developed customer archetypes based on analysis of user engagement behavior and cognitive patterns that were pairable with user account identifiers for targeted content
+### **LivePerson, Artificial Intelligence Research Team** — Principal UX Researcher
+*2019 - 2020 (1 year)*
+
+- Published series of Medium articles related to conversational design
+- Cross-functional collaboration resulted in development of patent for new ML training algorithm based on UXR insights into conversational structuring across turn-exchanges (**Patent: 11,522,818** · Issued Dec 6, 2022)
+
+### **Amazon, Seattle** — Sr. UX Researcher
+*2017 - 2019*
+
+Produced research insights that were used and adopted across Alexa and even more broadly in Amazon and are purportedly still used today. Examples include:
+1. The first research into customer privacy and security concerns related to the use of conversational AI as "creepy"
+2. The creation of Alexa customer archetypes based on engagement behavior, emotional registers, and cognitive associations that were pairable with user account identifiers for targeted Alexa content
+
+### **Anthro-Tech, User-Centered Design Consultancy, Seattle** — UX Research
+*2017 - 2018*
+
+### **Battelle Memorial Institute, Seattle** — Research Scientist
+*2016 - 2017*
+
+### **Tokyo Metropolitan Institute of Gerontology, Tokyo JP** — Research Scientist
+*2013 - 2015*
 
 ---
 
-## 🚀 PROJECTS & PUBLICATIONS
+## 🎓 Education
 
-- **NLP Model Development:** Co-developed machine learning model for classifying open-text abuse reports (Google)
-- **Data-Driven Archetypes:** Created data framework for classifying users based on behavioral patterns (Amazon)
-- **Patent:** Co-inventor, "Method for Training Conversational AI Models" (Patent #11,522,818, Dec 2022)
+### **University of Chicago** — Doctor of Philosophy
+*2007 - 2015*  
+Cultural Anthropology and East Asian Studies (Specialization: Science and Technology Studies)
+
+### **U.C. Berkeley** — Masters from School of Information
+*2024 - 2026*  
+School of Information, with focus on data analytics and engineering
 
 ---
 
-## 🏆 AWARDS & ACHIEVEMENTS
+## 🛠️ Core Skills
 
+- **Qualitative Research**
+- **Quantitative Research**
+- **Ethnography**
+- **Data Analytics & Statistics**
+- **Applied Machine Learning**
+- **Programming:** Python, R, SQL
+- **Languages:** Japanese (Research Fluency)
+
+---
+
+## 🏆 Awards & Recognition
+
+- **Google UXR Award Recipient** (H1 2023) for helping to develop an NLP model for open-text abuse-type classification based on user-centric data
 - **Google Cloud Tech Impact Award** (2024) for Dynamic Workload Scheduler
-- **Google UXR Award Recipient** (2023) for NLP model development
 - **Fulbright Fellowship** (2013)
-- **National Science Foundation Grant Recipient** (2010)
+- **National Science Foundation** (2010)
 
-This is protected by "Creative Commons Attribution Share Alike 4.0 International": https://creativecommons.org/licenses/by-sa/4.0/
+---
+
+## 📚 Publications & Contributions
+
+### Research Publications
+- [Help-seeking and Coping Strategies for Technology-facilitated Abuse Experienced by Youth](https://link-to-publication)
+
+### UX Methodology & Thought Leadership
+- [Academia to UX (YouTube Channel)](https://youtube.com/@academiatoux)
+- [Introducing Systems UX Research](https://link-to-publication)
+- [Breaking the Black Box of Users' Experience](https://link-to-publication)
+- [End-User Interpellation of User Interface (UI) Frameworks](https://link-to-publication)
+- [A New Approach to Focus Groups](https://link-to-publication)
+- [Rapid & Large-Scale Research: Hub-and-Spoke Model for Data Collection](https://link-to-publication)
+- [The Do's and Don'ts of Personas](https://link-to-publication)
+- [Deep Analysis in UX Research: Ethnography as an Approach Not Method](https://link-to-publication)
+- [Archetypes in User Research](https://link-to-publication)
+
+---
+
+## 🔬 Patents
+
+**Patent US 11,522,818** - *Machine learning training algorithm based on UXR insights into conversational structuring across turn-exchanges* (Issued December 6, 2022)
+
+---
+
+*Last updated: July 2025*
